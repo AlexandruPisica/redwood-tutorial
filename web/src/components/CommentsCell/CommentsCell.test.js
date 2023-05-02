@@ -1,32 +1,41 @@
-import { render } from '@redwoodjs/testing/web'
+import { render, screen, waitFor } from '@redwoodjs/testing'
 
-import { Loading, Empty, Failure, Success } from './CommentsCell'
-import { standard } from './CommentsCell.mock'
+import Comment from './Comment'
 
-describe('CommentsCell', () => {
-  it('renders Loading successfully', () => {
-    expect(() => {
-      render(<Loading />)
-    }).not.toThrow()
+const COMMENT = {
+  name: 'John Doe',
+  body: 'This is my comment',
+  createdAt: '2020-01-02T12:34:56Z',
+}
+
+describe('Comment', () => {
+  it('renders successfully', () => {
+    render(<Comment comment={COMMENT} />)
+
+    expect(screen.getByText(COMMENT.name)).toBeInTheDocument()
+    expect(screen.getByText(COMMENT.body)).toBeInTheDocument()
+    const dateExpect = screen.getByText('2 January 2020')
+    expect(dateExpect).toBeInTheDocument()
+    expect(dateExpect.nodeName).toEqual('TIME')
+    expect(dateExpect).toHaveAttribute('datetime', COMMENT.createdAt)
   })
 
-  it('renders Empty successfully', async () => {
-    expect(() => {
-      render(<Empty />)
-      expect(screen.getByText('No comments yet')).toBeInTheDocument()
+  it('does not render a delete button if user is logged out', async () => {
+    render(<Comment comment={COMMENT} />)
+
+    await waitFor(() =>
+      expect(screen.queryByText('Delete')).not.toBeInTheDocument()
+    )
   })
 
-  it('renders Failure successfully', async () => {
-    expect(() => {
-      render(<Failure error={new Error('Oh no')} />)
-    }).not.toThrow()
-  })
-
-  it('renders Success successfully', async () => {
-    const comments = standard().comments
-    render(<Success comments={comments} />)
-
-    comments.forEach((comment) => {
-      expect(screen.getByText(comment.body)).toBeInTheDocument()
+  it('renders a delete button if the user is a moderator', async () => {
+    mockCurrentUser({
+      id: 1,
+      email: 'moderator@moderator.com',
+      roles: 'moderator',
     })
+    render(<Comment comment={COMMENT} />)
+
+    await waitFor(() => expect(screen.getByText('Delete')).toBeInTheDocument())
+  })
 })
