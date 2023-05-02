@@ -1,40 +1,50 @@
-import { render, screen, within } from '@redwoodjs/testing'
+import { render, screen, waitFor } from '@redwoodjs/testing'
 
-import { Loading, Empty, Failure, Success } from './ArticlesCell'
-import { standard } from './ArticlesCell.mock'
+import { standard } from 'src/components/CommentsCell/CommentsCell.mock'
 
-describe('ArticlesCell', () => {
-  test('Loading renders successfully', () => {
-    expect(() => {
-      render(<Loading />)
-    }).not.toThrow()
+import Article from './Article'
+
+const ARTICLE = {
+  id: 1,
+  title: 'First post',
+  body: `Neutra tacos hot chicken prism raw denim, put a bird on it enamel pin post-ironic vape cred DIY. Street art next level umami squid. Hammock hexagon glossier 8-bit banjo. Neutra la croix mixtape echo park four loko semiotics kitsch forage chambray. Semiotics salvia selfies jianbing hella shaman. Letterpress helvetica vaporware cronut, shaman butcher YOLO poke fixie hoodie gentrify woke heirloom.`,
+  createdAt: new Date().toISOString(),
+}
+
+describe('Article', () => {
+  it('renders a blog post', () => {
+    render(<Article article={ARTICLE} />)
+
+    expect(screen.getByText(ARTICLE.title)).toBeInTheDocument()
+    expect(screen.getByText(ARTICLE.body)).toBeInTheDocument()
   })
 
-  test('Empty renders successfully', async () => {
-    expect(() => {
-      render(<Empty />)
-    }).not.toThrow()
+  it('renders comments when displaying a full blog post', async () => {
+    const comment = standard().comments[0]
+    render(<Article article={ARTICLE} />)
+
+    await waitFor(() =>
+      expect(screen.getByText(comment.body)).toBeInTheDocument()
+    )
   })
 
-  test('Failure renders successfully', async () => {
-    expect(() => {
-      render(<Failure error={new Error('Oh no')} />)
-    }).not.toThrow()
+  it('renders a summary of a blog post', () => {
+    render(<Article article={ARTICLE} summary={true} />)
+
+    expect(screen.getByText(ARTICLE.title)).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        'Neutra tacos hot chicken prism raw denim, put a bird on it enamel pin post-ironic vape cred DIY. Str...'
+      )
+    ).toBeInTheDocument()
   })
 
-  test('Success renders successfully', async () => {
-    const articles = standard().articles
-    render(<Success articles={articles} />)
+  it('does not render comments when displaying a summary', async () => {
+    const comment = standard().comments[0]
+    render(<Article article={ARTICLE} summary={true} />)
 
-    articles.forEach((article) => {
-      const truncatedBody = article.body.substring(0, 10)
-      const matchedBody = screen.getByText(truncatedBody, { exact: false })
-      const ellipsis = within(matchedBody).getByText('...', { exact: false })
-
-      expect(screen.getByText(article.title)).toBeInTheDocument()
-      expect(screen.queryByText(article.body)).not.toBeInTheDocument()
-      expect(matchedBody).toBeInTheDocument()
-      expect(ellipsis).toBeInTheDocument()
-    })
+    await waitFor(() =>
+      expect(screen.queryByText(comment.body)).not.toBeInTheDocument()
+    )
   })
 })
